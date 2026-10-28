@@ -1,0 +1,54 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  points    Int      @default(0)
+  reports   Report[]
+  createdAt DateTime @default(now())
+}
+
+model Report {
+  id          String       @id @default(uuid())
+  userId      String
+  user        User         @relation(fields: [userId], references: [id])
+  imageUrl    String
+  category    String       // ORGANIC, ANORGANIC, MIXED
+  weight      Float        // dalam kg
+  latitude    Float
+  longitude   Float
+  status      ReportStatus @default(PENDING)
+  vehicleRec  String       // MOTOR, PICKUP, TRUCK
+  createdAt   DateTime     @default(now())
+}
+
+model Driver {
+  id           String   @id @default(uuid())
+  name         String
+  vehicleType  String   // MOTOR, TOSA, PICKUP, TRUCK
+  isReady      Boolean  @default(true)
+  currentLat   Float
+  currentLng   Float
+}
+
+model Voucher {
+  id          String   @id @default(uuid())
+  title       String
+  discount    String
+  pointsCost  Int
+  merchant    String
+}
+
+enum ReportStatus {
+  PENDING
+  ACCEPTED
+  COMPLETED
+}
