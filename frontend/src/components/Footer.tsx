@@ -58,9 +58,9 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
-                <span className="text-slate-500 cursor-not-allowed">
-                  Jadwal Angkutan Komersial (Segera)
-                </span>
+                <Link href="/contact" className="hover:text-emerald-400 transition-colors">
+                  Kontak Kami & Operasi Sungai (Alat Berat)
+                </Link>
               </li>
             </ul>
           </div>

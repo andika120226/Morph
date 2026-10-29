@@ -106,7 +106,7 @@ export default function DriverMapPage() {
       vehicleRec: "MOTOR",
       imageUrl:
         "https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?auto=format&fit=crop&w=600&q=80",
-      createdAt: new Date(Date.now() - 10 * 60000).toISOString(),
+      createdAt: "2026-10-28T09:10:00.000Z",
     },
     {
       id: "rep-bdl-02",
@@ -119,7 +119,7 @@ export default function DriverMapPage() {
       vehicleRec: "PICKUP",
       imageUrl:
         "https://images.unsplash.com/photo-1526951521990-620dc14c214b?auto=format&fit=crop&w=600&q=80",
-      createdAt: new Date(Date.now() - 25 * 60000).toISOString(),
+      createdAt: "2026-10-28T08:55:00.000Z",
     },
     {
       id: "rep-bdl-03",
@@ -132,7 +132,7 @@ export default function DriverMapPage() {
       vehicleRec: "TRUCK",
       imageUrl:
         "https://images.unsplash.com/photo-1605600659908-0ef719419d41?auto=format&fit=crop&w=600&q=80",
-      createdAt: new Date(Date.now() - 40 * 60000).toISOString(),
+      createdAt: "2026-10-28T08:40:00.000Z",
     },
     {
       id: "rep-bdl-04",
@@ -145,7 +145,7 @@ export default function DriverMapPage() {
       vehicleRec: "PICKUP",
       imageUrl:
         "https://images.unsplash.com/photo-1526951521990-620dc14c214b?auto=format&fit=crop&w=600&q=80",
-      createdAt: new Date(Date.now() - 50 * 60000).toISOString(),
+      createdAt: "2026-10-28T08:30:00.000Z",
     },
     {
       id: "rep-bdl-05",
@@ -158,7 +158,7 @@ export default function DriverMapPage() {
       vehicleRec: "MOTOR",
       imageUrl:
         "https://images.unsplash.com/photo-1526951521990-620dc14c214b?auto=format&fit=crop&w=600&q=80",
-      createdAt: new Date(Date.now() - 75 * 60000).toISOString(),
+      createdAt: "2026-10-28T08:05:00.000Z",
     },
   ];
 

@@ -12,6 +12,7 @@ import {
   X,
   Coins,
   User,
+  MessageSquare,
 } from "lucide-react";
 
 export default function Navbar() {
@@ -28,6 +29,7 @@ export default function Navbar() {
     { href: "/cleanup-request", label: "Lapor Sampah", icon: PlusCircle },
     { href: "/driver-map", label: "Peta Driver", icon: MapPin },
     { href: "/rewards", label: "Tukar Rewards", icon: Gift },
+    { href: "/contact", label: "Kontak Kami", icon: MessageSquare },
     { href: "/profile", label: "Profil", icon: User },
   ];
 

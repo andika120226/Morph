@@ -23,11 +23,84 @@ import {
 } from "lucide-react";
 import LeafletMap from "@/components/LeafletMap";
 
+export type WeightUnit = "g" | "ons" | "kg" | "kwintal" | "ton";
+
+interface UnitConfig {
+  id: WeightUnit;
+  label: string;
+  shortLabel: string;
+  group: "Di Bawah Kg" | "Standar" | "Di Atas Kg";
+  toKgFactor: number; // 1 unit = X kg
+  min: number;
+  max: number;
+  step: number;
+  defaultVal: number;
+}
+
+const WEIGHT_UNITS: Record<WeightUnit, UnitConfig> = {
+  g: {
+    id: "g",
+    label: "Gram (g)",
+    shortLabel: "g",
+    group: "Di Bawah Kg",
+    toKgFactor: 0.001, // 1.000 g = 1 kg
+    min: 50,
+    max: 5000,
+    step: 50,
+    defaultVal: 500,
+  },
+  ons: {
+    id: "ons",
+    label: "Ons (100g)",
+    shortLabel: "ons",
+    group: "Di Bawah Kg",
+    toKgFactor: 0.1, // 10 ons = 1 kg
+    min: 1,
+    max: 100,
+    step: 1,
+    defaultVal: 5,
+  },
+  kg: {
+    id: "kg",
+    label: "Kilogram (kg)",
+    shortLabel: "kg",
+    group: "Standar",
+    toKgFactor: 1, // 1 kg = 1 kg
+    min: 1,
+    max: 200,
+    step: 1,
+    defaultVal: 15,
+  },
+  kwintal: {
+    id: "kwintal",
+    label: "Kwintal (100kg)",
+    shortLabel: "kwintal",
+    group: "Di Atas Kg",
+    toKgFactor: 100, // 1 kwintal = 100 kg
+    min: 0.5,
+    max: 20,
+    step: 0.5,
+    defaultVal: 1,
+  },
+  ton: {
+    id: "ton",
+    label: "Ton (1.000kg)",
+    shortLabel: "ton",
+    group: "Di Atas Kg",
+    toKgFactor: 1000, // 1 ton = 1.000 kg
+    min: 0.5,
+    max: 10,
+    step: 0.5,
+    defaultVal: 1,
+  },
+};
+
 interface CategoryOption {
   id: string;
   label: string;
   desc: string;
-  defaultWeight: number;
+  defaultAmount: number;
+  defaultUnit: WeightUnit;
 }
 
 const WASTE_CATEGORIES: CategoryOption[] = [
@@ -35,33 +108,44 @@ const WASTE_CATEGORIES: CategoryOption[] = [
     id: "ORGANIC",
     label: "Sampah Organik",
     desc: "Sisa makanan, sayuran, daun kering, kompos rumah tangga",
-    defaultWeight: 15,
+    defaultAmount: 15,
+    defaultUnit: "kg",
   },
   {
     id: "ANORGANIC",
     label: "Plastik & Anorganik",
     desc: "Botol plastik, kemasan, kaleng minuman, kaca",
-    defaultWeight: 20,
+    defaultAmount: 20,
+    defaultUnit: "kg",
   },
   {
     id: "PAPER",
     label: "Kardus & Kertas",
     desc: "Kardus paket, koran, kertas arsip kantor, karton",
-    defaultWeight: 15,
+    defaultAmount: 15,
+    defaultUnit: "kg",
   },
   {
     id: "EWASTE",
     label: "Elektronik & B3 Rumah Tangga",
     desc: "Baterai bekas, kabel, peralatan elektronik rusak",
-    defaultWeight: 10,
+    defaultAmount: 500,
+    defaultUnit: "g",
   },
 ];
 
+interface CategoryWeightEntry {
+  amount: number;
+  unit: WeightUnit;
+}
+
 export default function CleanupRequestPage() {
-  // Multi-select state: map of categoryId -> weight (kg)
-  const [selectedCategories, setSelectedCategories] = useState<Record<string, number>>({
-    ORGANIC: 15,
-    ANORGANIC: 20,
+  // Multi-select state: map of categoryId -> { amount, unit }
+  const [selectedCategories, setSelectedCategories] = useState<
+    Record<string, CategoryWeightEntry>
+  >({
+    ORGANIC: { amount: 15, unit: "kg" },
+    ANORGANIC: { amount: 20, unit: "kg" },
   });
 
   const [imageUrl, setImageUrl] = useState<string>(
@@ -79,6 +163,27 @@ export default function CleanupRequestPage() {
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [successReport, setSuccessReport] = useState<any | null>(null);
 
+  // Convert any entry { amount, unit } to kilograms (kg)
+  const convertToKg = (entry: CategoryWeightEntry): number => {
+    const unitCfg = WEIGHT_UNITS[entry.unit] || WEIGHT_UNITS.kg;
+    const rawKg = Number(entry.amount || 0) * unitCfg.toKgFactor;
+    return Number(rawKg.toFixed(3));
+  };
+
+  // Format kg nicely (e.g. 0.5 kg -> "0.5 kg (500 g)", 1200 kg -> "1.200 kg (1.2 ton)")
+  const formatTotalWeightDisplay = (kg: number): string => {
+    if (kg < 1) {
+      return `${kg} kg (${Math.round(kg * 1000)} g)`;
+    }
+    if (kg >= 1000) {
+      return `${kg.toLocaleString("id-ID")} kg (${(kg / 1000).toFixed(2)} Ton)`;
+    }
+    if (kg >= 100) {
+      return `${kg.toLocaleString("id-ID")} kg (${(kg / 100).toFixed(1)} Kwintal)`;
+    }
+    return `${kg} kg`;
+  };
+
   // Toggle category selection (at least 1 category remains active)
   const toggleCategory = (cat: CategoryOption) => {
     setSelectedCategories((prev) => {
@@ -89,50 +194,83 @@ export default function CleanupRequestPage() {
         }
         delete next[cat.id];
       } else {
-        next[cat.id] = cat.defaultWeight;
+        next[cat.id] = {
+          amount: cat.defaultAmount,
+          unit: cat.defaultUnit,
+        };
       }
       return next;
     });
   };
 
-  // Update individual category weight
-  const updateCategoryWeight = (catId: string, newWeight: number) => {
-    const clamped = Math.max(1, Math.min(300, newWeight));
-    setSelectedCategories((prev) => ({
-      ...prev,
-      [catId]: clamped,
-    }));
+  // Update individual category amount
+  const updateCategoryAmount = (catId: string, newAmount: number) => {
+    setSelectedCategories((prev) => {
+      const current = prev[catId] || { amount: 1, unit: "kg" };
+      const unitCfg = WEIGHT_UNITS[current.unit];
+      const clamped = Math.max(
+        0.1,
+        Math.min(unitCfg.max * 2, Number(newAmount) || 0)
+      );
+      return {
+        ...prev,
+        [catId]: {
+          ...current,
+          amount: clamped,
+        },
+      };
+    });
   };
 
-  // Total combined weight across all selected categories
-  const totalWeight = Object.values(selectedCategories).reduce(
-    (acc, w) => acc + Number(w || 0),
-    0
+  // Update individual category unit (g, ons, kg, kwintal, ton)
+  const updateCategoryUnit = (catId: string, newUnit: WeightUnit) => {
+    setSelectedCategories((prev) => {
+      const unitCfg = WEIGHT_UNITS[newUnit];
+      return {
+        ...prev,
+        [catId]: {
+          amount: unitCfg.defaultVal,
+          unit: newUnit,
+        },
+      };
+    });
+  };
+
+  // Total combined weight in kg across all selected categories
+  const totalWeight = Number(
+    Object.values(selectedCategories)
+      .reduce((acc, entry) => acc + convertToKg(entry), 0)
+      .toFixed(2)
   );
 
   // Formatted multi-category label for backend & display
   const formattedCategoriesSummary = Object.entries(selectedCategories)
-    .map(([id, w]) => {
+    .map(([id, entry]) => {
       const found = WASTE_CATEGORIES.find((c) => c.id === id);
-      return `${found ? found.label : id} (${w} kg)`;
+      const unitCfg = WEIGHT_UNITS[entry.unit];
+      const eqKg = convertToKg(entry);
+      const eqInfo =
+        entry.unit === "kg" ? `${entry.amount} kg` : `${entry.amount} ${unitCfg.shortLabel} (${eqKg} kg)`;
+      return `${found ? found.label : id}: ${eqInfo}`;
     })
     .join(", ");
 
   const formattedCategoryCode = Object.entries(selectedCategories)
-    .map(([id, w]) => `${id}:${w}kg`)
+    .map(([id, entry]) => `${id}:${entry.amount}${entry.unit}`)
     .join(" + ");
 
-  // Compute vehicle recommendation according to heuristic rule:
+  // Compute vehicle recommendation according to heuristic rule (in kg):
   // totalWeight < 30 kg -> MOTOR
   // 30 - 200 kg -> PICKUP
   // > 200 kg -> TRUCK
-  const computeVehicleRec = (w: number) => {
-    if (w < 30) return "MOTOR";
-    if (w <= 200) return "PICKUP";
+  const computeVehicleRec = (wKg: number) => {
+    if (wKg < 30) return "MOTOR";
+    if (wKg <= 200) return "PICKUP";
     return "TRUCK";
   };
 
   const vehicleRec = computeVehicleRec(totalWeight);
+  const estimatedPoints = Math.max(1, Math.round(totalWeight * 10));
 
   // File upload handler (reads image as Data URL for preview & submission)
   const handleFileUpload = (e: ChangeEvent<HTMLInputElement>) => {
@@ -188,7 +326,6 @@ export default function CleanupRequestPage() {
 
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
-    // Get logged in user from localStorage if available
     let currentUserId = "demo-user-1";
     if (typeof window !== "undefined") {
       try {
@@ -274,13 +411,13 @@ export default function CleanupRequestPage() {
         <div className="mb-8">
           <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-[#ffffff] border border-emerald-200 text-[#16a34a] text-xs font-bold uppercase tracking-wider mb-2 shadow-2xs">
             <PlusCircle className="w-3.5 h-3.5" />
-            <span>Form Lapor Penjemputan Multi-Kategori</span>
+            <span>Form Lapor Penjemputan Multi-Kategori &amp; Multi-Satuan Berat</span>
           </div>
           <h1 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">
             Lapor Sampah &amp; Panggil Armada MORPH
           </h1>
           <p className="text-slate-600 text-sm mt-1">
-            Pilih satu atau beberapa jenis sampah sekaligus, atur berat masing-masing kategori, dan tandai lokasi penjemputan di peta.
+            Pilih kategori sampah dan atur berat menggunakan satuan di bawah Kg (<strong>Gram, Ons</strong>), standar (<strong>Kg</strong>), maupun di atas Kg (<strong>Kwintal, Ton</strong>).
           </p>
         </div>
 
@@ -315,9 +452,9 @@ export default function CleanupRequestPage() {
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-500">Total Berat Gabungan:</span>
+                  <span className="text-slate-500">Total Berat Konversi:</span>
                   <span className="font-extrabold text-slate-900">
-                    {successReport.weight} kg
+                    {formatTotalWeightDisplay(Number(successReport.weight))}
                   </span>
                 </div>
                 <div className="flex justify-between">
@@ -329,7 +466,7 @@ export default function CleanupRequestPage() {
                 <div className="flex justify-between">
                   <span className="text-slate-500">Estimasi Poin Reward:</span>
                   <span className="font-extrabold text-amber-600">
-                    +{Math.round(successReport.weight * 10)} Poin MORPH
+                    +{Math.max(1, Math.round(Number(successReport.weight) * 10))} Poin MORPH
                   </span>
                 </div>
               </div>
@@ -356,17 +493,17 @@ export default function CleanupRequestPage() {
         {/* Main Form */}
         <form onSubmit={handleSubmit} className="space-y-8">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-            {/* Left Column: Multi-Category Selection + Individual Weights + Photo */}
+            {/* Left Column: Multi-Category Selection + Multi-Unit Weight Controls + Photo */}
             <div className="lg:col-span-7 space-y-6">
-              {/* 1. Multi-Select Waste Categories & Separate Weight Sliders */}
+              {/* 1. Multi-Select Waste Categories & Multi-Unit Weight Sliders */}
               <div className="bg-[#ffffff] rounded-2xl p-6 border border-emerald-100 shadow-sm space-y-4">
-                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
                   <div>
                     <label className="text-base font-extrabold text-slate-900 block">
-                      1. Pilih Kategori &amp; Berat Masing-Masing Sampah
+                      1. Pilih Kategori &amp; Satuan Berat Sampah
                     </label>
                     <p className="text-xs text-slate-500 mt-0.5">
-                      Centang satu atau lebih jenis sampah dan sesuaikan slider berat tiap kategori
+                      Mendukung satuan di bawah Kg (<strong>Gram, Ons</strong>), <strong>Kilogram</strong>, hingga di atas Kg (<strong>Kwintal, Ton</strong>)
                     </p>
                   </div>
                   <span className="px-3 py-1 rounded-full bg-[#f0fdf4] border border-emerald-200 text-[#16a34a] text-xs font-extrabold">
@@ -374,10 +511,38 @@ export default function CleanupRequestPage() {
                   </span>
                 </div>
 
+                {/* Info Bar Konversi Satuan */}
+                <div className="grid grid-cols-5 gap-1.5 p-2 rounded-xl bg-[#f0fdf4] border border-emerald-200 text-[11px] text-center font-semibold text-slate-700">
+                  <div className="bg-white rounded-lg py-1 px-1.5 border border-emerald-100">
+                    <span className="block text-[9px] uppercase text-slate-400 font-bold">Di Bawah Kg</span>
+                    <span className="text-[#16a34a] font-bold">Gram (g)</span>
+                  </div>
+                  <div className="bg-white rounded-lg py-1 px-1.5 border border-emerald-100">
+                    <span className="block text-[9px] uppercase text-slate-400 font-bold">Di Bawah Kg</span>
+                    <span className="text-[#16a34a] font-bold">Ons (100g)</span>
+                  </div>
+                  <div className="bg-[#16a34a] text-white rounded-lg py-1 px-1.5">
+                    <span className="block text-[9px] uppercase text-emerald-100 font-bold">Standar</span>
+                    <span className="font-extrabold">Kilogram (kg)</span>
+                  </div>
+                  <div className="bg-white rounded-lg py-1 px-1.5 border border-emerald-100">
+                    <span className="block text-[9px] uppercase text-slate-400 font-bold">Di Atas Kg</span>
+                    <span className="text-[#16a34a] font-bold">Kwintal (100kg)</span>
+                  </div>
+                  <div className="bg-white rounded-lg py-1 px-1.5 border border-emerald-100">
+                    <span className="block text-[9px] uppercase text-slate-400 font-bold">Di Atas Kg</span>
+                    <span className="text-[#16a34a] font-bold">Ton (1000kg)</span>
+                  </div>
+                </div>
+
                 <div className="space-y-3">
                   {WASTE_CATEGORIES.map((item) => {
-                    const isChecked = selectedCategories[item.id] !== undefined;
-                    const catWeight = selectedCategories[item.id] ?? item.defaultWeight;
+                    const entry = selectedCategories[item.id];
+                    const isChecked = entry !== undefined;
+                    const currentAmount = entry?.amount ?? item.defaultAmount;
+                    const currentUnit: WeightUnit = entry?.unit ?? item.defaultUnit;
+                    const unitCfg = WEIGHT_UNITS[currentUnit];
+                    const convertedKg = isChecked ? convertToKg(entry) : 0;
 
                     return (
                       <div
@@ -390,7 +555,7 @@ export default function CleanupRequestPage() {
                       >
                         <div
                           onClick={() => toggleCategory(item)}
-                          className="flex items-start justify-between gap-3 cursor-pointer select-none"
+                          className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 cursor-pointer select-none"
                         >
                           <div className="flex items-start gap-3">
                             <div className="mt-0.5 text-[#16a34a]">
@@ -424,62 +589,129 @@ export default function CleanupRequestPage() {
                             </div>
                           </div>
 
+                          {/* Number Input + Unit Dropdown Selector */}
                           {isChecked && (
                             <div
                               onClick={(e) => e.stopPropagation()}
-                              className="flex items-center gap-1.5 bg-[#ffffff] px-2.5 py-1 rounded-xl border border-emerald-200 shadow-2xs"
+                              className="flex items-center gap-1.5 bg-[#ffffff] px-2.5 py-1.5 rounded-xl border border-emerald-200 shadow-2xs shrink-0 self-end sm:self-auto"
                             >
                               <input
                                 type="number"
-                                min={1}
-                                max={300}
-                                value={catWeight}
+                                min={0.1}
+                                step={unitCfg.step}
+                                value={currentAmount}
                                 onChange={(e) =>
-                                  updateCategoryWeight(
+                                  updateCategoryAmount(
                                     item.id,
                                     Number(e.target.value)
                                   )
                                 }
-                                className="w-12 text-right font-mono font-extrabold text-sm text-[#16a34a] focus:outline-none"
+                                className="w-16 text-right font-mono font-extrabold text-sm text-[#16a34a] focus:outline-none"
                               />
-                              <span className="text-xs font-bold text-slate-500">
-                                kg
-                              </span>
+                              <select
+                                value={currentUnit}
+                                onChange={(e) =>
+                                  updateCategoryUnit(
+                                    item.id,
+                                    e.target.value as WeightUnit
+                                  )
+                                }
+                                aria-label={`Pilih satuan berat untuk ${item.label}`}
+                                className="text-xs font-extrabold text-slate-800 bg-[#f0fdf4] border border-emerald-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-[#16a34a] cursor-pointer"
+                              >
+                                <optgroup label="Di Bawah Kg">
+                                  <option value="g">g (Gram)</option>
+                                  <option value="ons">ons (Ons)</option>
+                                </optgroup>
+                                <optgroup label="Satuan Standar">
+                                  <option value="kg">kg (Kilogram)</option>
+                                </optgroup>
+                                <optgroup label="Di Atas Kg">
+                                  <option value="kwintal">kwintal (100 kg)</option>
+                                  <option value="ton">ton (1.000 kg)</option>
+                                </optgroup>
+                              </select>
                             </div>
                           )}
                         </div>
 
-                        {/* Individual Category Weight Slider when checked */}
+                        {/* Individual Category Unit Buttons & Weight Slider when checked */}
                         {isChecked && (
                           <div
                             onClick={(e) => e.stopPropagation()}
-                            className="mt-4 pt-3 border-t border-emerald-200/60 space-y-1.5"
+                            className="mt-4 pt-3 border-t border-emerald-200/60 space-y-2.5"
                           >
-                            <div className="flex justify-between text-[11px] font-semibold text-slate-600">
-                              <span>Atur Berat {item.label}:</span>
-                              <span className="text-[#16a34a] font-bold">
-                                {catWeight} kg (+{catWeight * 10} Poin)
+                            {/* Quick Unit Switcher Pills (Di Bawah Kg / Kg / Di Atas Kg) */}
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <span className="text-[11px] font-bold text-slate-600">
+                                Pilih Satuan ({unitCfg.group}):
                               </span>
+                              <div className="flex flex-wrap items-center gap-1">
+                                {(Object.keys(WEIGHT_UNITS) as WeightUnit[]).map(
+                                  (uKey) => {
+                                    const u = WEIGHT_UNITS[uKey];
+                                    const active = currentUnit === uKey;
+                                    return (
+                                      <button
+                                        key={uKey}
+                                        type="button"
+                                        onClick={() =>
+                                          updateCategoryUnit(item.id, uKey)
+                                        }
+                                        className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-colors cursor-pointer ${
+                                          active
+                                            ? "bg-[#16a34a] text-white shadow-2xs"
+                                            : "bg-white text-slate-600 border border-emerald-200 hover:bg-emerald-50"
+                                        }`}
+                                      >
+                                        {u.shortLabel}
+                                      </button>
+                                    );
+                                  }
+                                )}
+                              </div>
                             </div>
-                            <input
-                              type="range"
-                              min="1"
-                              max="150"
-                              step="1"
-                              value={catWeight}
-                              onChange={(e) =>
-                                updateCategoryWeight(
-                                  item.id,
-                                  Number(e.target.value)
-                                )
-                              }
-                              className="w-full h-2 bg-emerald-200 rounded-lg appearance-none cursor-pointer accent-[#16a34a]"
-                            />
-                            <div className="flex justify-between text-[10px] text-slate-400 font-mono">
-                              <span>1 kg</span>
-                              <span>50 kg</span>
-                              <span>100 kg</span>
-                              <span>150 kg</span>
+
+                            {/* Weight Slider */}
+                            <div className="space-y-1">
+                              <div className="flex justify-between text-[11px] font-semibold text-slate-600">
+                                <span>
+                                  Atur Jumlah ({unitCfg.label}):{" "}
+                                  <strong className="text-slate-900">
+                                    {currentAmount} {unitCfg.shortLabel}
+                                  </strong>
+                                </span>
+                                <span className="text-[#16a34a] font-bold">
+                                  Setara {convertedKg} kg (+
+                                  {Math.max(1, Math.round(convertedKg * 10))}{" "}
+                                  Poin)
+                                </span>
+                              </div>
+                              <input
+                                type="range"
+                                min={unitCfg.min}
+                                max={unitCfg.max}
+                                step={unitCfg.step}
+                                value={Math.min(unitCfg.max, currentAmount)}
+                                onChange={(e) =>
+                                  updateCategoryAmount(
+                                    item.id,
+                                    Number(e.target.value)
+                                  )
+                                }
+                                className="w-full h-2 bg-emerald-200 rounded-lg appearance-none cursor-pointer accent-[#16a34a]"
+                              />
+                              <div className="flex justify-between text-[10px] text-slate-400 font-mono">
+                                <span>
+                                  {unitCfg.min} {unitCfg.shortLabel}
+                                </span>
+                                <span>
+                                  {unitCfg.max / 2} {unitCfg.shortLabel}
+                                </span>
+                                <span>
+                                  {unitCfg.max} {unitCfg.shortLabel}
+                                </span>
+                              </div>
                             </div>
                           </div>
                         )}
@@ -491,14 +723,14 @@ export default function CleanupRequestPage() {
                 {/* Total Combined Weight & Automatic AI Fleet Recommendation */}
                 <div className="mt-4 p-4 rounded-2xl bg-[#f0fdf4] border border-emerald-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-2xl bg-[#16a34a] text-[#ffffff] flex items-center justify-center shadow-sm">
+                    <div className="w-12 h-12 rounded-2xl bg-[#16a34a] text-[#ffffff] flex items-center justify-center shadow-sm shrink-0">
                       {vehicleRec === "MOTOR" && <Bike className="w-6 h-6" />}
                       {vehicleRec === "PICKUP" && <Car className="w-6 h-6" />}
                       {vehicleRec === "TRUCK" && <Truck className="w-6 h-6" />}
                     </div>
                     <div>
                       <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#16a34a]">
-                        Rekomendasi Armada AI (Total: {totalWeight} kg)
+                        Rekomendasi Armada AI ({formatTotalWeightDisplay(totalWeight)})
                       </span>
                       <h4 className="font-black text-slate-900 text-sm">
                         {vehicleRec === "MOTOR" &&
@@ -506,7 +738,7 @@ export default function CleanupRequestPage() {
                         {vehicleRec === "PICKUP" &&
                           "Armada Mobil Pickup Eco (30 - 200 kg)"}
                         {vehicleRec === "TRUCK" &&
-                          "Armada Truk Hidrolik Besar (> 200 kg)"}
+                          "Armada Truk Hidrolik Besar (> 200 kg / Kwintal / Ton)"}
                       </h4>
                       <p className="text-xs text-slate-600 mt-0.5">
                         {formattedCategoriesSummary}
@@ -519,7 +751,7 @@ export default function CleanupRequestPage() {
                       {vehicleRec}
                     </span>
                     <span className="text-xs font-bold text-slate-700 font-mono">
-                      Total: {totalWeight} kg
+                      {formatTotalWeightDisplay(totalWeight)}
                     </span>
                   </div>
                 </div>
@@ -611,7 +843,7 @@ export default function CleanupRequestPage() {
               </div>
             </div>
 
-            {/* Right Column: Interactive Google Maps-Style Location Picker & Submit */}
+            {/* Right Column: Interactive Location Picker & Submit */}
             <div className="lg:col-span-5 space-y-6">
               <div className="bg-[#ffffff] rounded-2xl p-6 border border-emerald-100 shadow-sm space-y-4">
                 <div className="flex items-center justify-between">
@@ -679,9 +911,9 @@ export default function CleanupRequestPage() {
                       Total Berat ({Object.keys(selectedCategories).length}{" "}
                       Kategori)
                     </span>
-                    <span className="text-xl font-black text-slate-900 flex items-center gap-1.5">
+                    <span className="text-lg font-black text-slate-900 flex items-center gap-1.5">
                       <Scale className="w-5 h-5 text-[#16a34a]" />
-                      {totalWeight} kg
+                      {formatTotalWeightDisplay(totalWeight)}
                     </span>
                   </div>
                   <div className="text-right">
@@ -690,7 +922,7 @@ export default function CleanupRequestPage() {
                     </span>
                     <span className="text-xl font-black text-[#16a34a] flex items-center justify-end gap-1">
                       <Coins className="w-5 h-5 text-amber-500 fill-amber-400" />
-                      +{Math.round(totalWeight * 10)} Poin
+                      +{estimatedPoints} Poin
                     </span>
                   </div>
                 </div>
