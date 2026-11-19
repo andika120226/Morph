@@ -1,77 +1,95 @@
-# 🌱 MORPH — Ekosistem Pengelolaan Sampah Cerdas Bandar Lampung
+# 🌱 MORPH Bandar Lampung — Smart Waste Management Ecosystem
 
-**MORPH** adalah platform manajemen pengelolaan sampah berbasis *on-demand* untuk Kota Bandar Lampung yang dikembangkan oleh **Tim Pengembang TeknoHijau**. Platform ini menghubungkan Rumah Tangga Urban, Pengurus RT/RW, Mitra Kebersihan Lapangan (Driver), dan Pusat Komando Operasional Admin melalui tiga aplikasi terintegrasi dalam satu repositori monorepo.
+> **Academic Technopreneurship Prototype — MORPH Smart Waste Ecosystem Bandar Lampung**  
+> Dikembangkan oleh **Tim Pengembang TeknoHijau**
 
-🌐 **Live Production Website (Vercel):** [https://frontend-three-smoky-67.vercel.app](https://frontend-three-smoky-67.vercel.app)
+**MORPH Bandar Lampung** adalah platform pengelolaan sampah terpilah berbasis *on-demand* yang mengintegrasikan Rumah Tangga Urban, Pengurus RT/RW, Mitra Kebersihan Lapangan (Driver), dan Pusat Komando Operasional Admin dalam satu repositori monorepo.
 
 ---
 
-## 📁 Struktur Folder Monorepo
+## 🔗 URL Akses Produksi & Deployment
+
+| Komponen | Platform | URL / Lokasi Akses |
+| :--- | :--- | :--- |
+| **Website Publik Korporat** | Vercel (Next.js) | [https://frontend-three-smoky-67.vercel.app](https://frontend-three-smoky-67.vercel.app) |
+| **Portal Demo Admin (1-Klik)** | Vercel (Next.js) | [https://frontend-three-smoky-67.vercel.app/admin-login](https://frontend-three-smoky-67.vercel.app/admin-login) |
+| **Admin Dashboard Console** | Vercel (Next.js) | [https://frontend-three-smoky-67.vercel.app/admin](https://frontend-three-smoky-67.vercel.app/admin) |
+| **Mobile Sync REST API** | Vercel Serverless Bridge | [https://frontend-three-smoky-67.vercel.app/api/mobile/orders](https://frontend-three-smoky-67.vercel.app/api/mobile/orders) |
+| **Mobile Web App (HP)** | Firebase Hosting | `https://morph-bandarlampung-app.web.app` |
+| **File Installer Android (`.APK`)** | GitHub Actions Artifact | Tab **Actions** $\rightarrow$ Workflow **Build MORPH Bandar Lampung Android APK** $\rightarrow$ Artifact **`MORPH-BandarLampung-Android.apk`** |
+
+---
+
+## 📁 Arsitektur Monorepo
 
 ```text
 Morph/
-├── frontend/          # Next.js (App Router) - Website Korporat Publik (GoCorp Style) & Secret Admin Dashboard
-├── backend/           # NestJS + Prisma ORM + PostgreSQL - REST API Server & Logika Pencocokan Armada
-├── mobile/            # Flutter Android (GetX CLI Architecture) - Aplikasi Mobile Warga & Mitra Driver
-├── .gitignore         # Konfigurasi eksklusi global untuk Node.js, Next.js, NestJS, dan Flutter
-└── README.md          # Dokumentasi utama monorepo MORPH
+├── .github/workflows/
+│   └── build-mobile-apk.yml  # CI/CD Otomatis Build Android APK (Java 17 + Flutter Stable)
+├── frontend/                 # Next.js (App Router) - Web Publik, Admin Dashboard & API Bridge
+│   ├── next.config.mjs       # Konfigurasi produksi & open CORS (/api/:path*)
+│   └── vercel.json           # Konfigurasi deployment Vercel & CORS /api/mobile/*
+├── backend/                  # NestJS + Prisma ORM + PostgreSQL (dengan In-Memory Fallback)
+├── mobile/                   # Flutter Android & Web (GetX CLI Architecture)
+│   ├── firebase.json         # Konfigurasi Firebase Hosting SPA (build/web)
+│   ├── .firebaserc           # Project ID: morph-bandarlampung-app
+│   └── lib/app/              # 6 Modul GetX CLI (Warga & Mitra Driver) + ApiConfig
+├── .gitignore                # Filter global (node_modules, .next, dist, build, .dart_tool, .env)
+└── README.md                 # Dokumentasi utama monorepo
 ```
 
 ---
 
-## 🚀 Cara Menjalankan Masing-Masing Komponen
+## 🚀 Panduan Menjalankan & Deploy Masing-Masing Komponen
 
-### 1. Frontend Web Publik & Portal Admin (`/frontend`)
-Dibangun menggunakan **Next.js (App Router)**, **Tailwind CSS**, **Lucide Icons**, dan **Leaflet OpenStreetMap**.
-- **Halaman Publik Korporat (`/`)**: Menampilkan profil perusahaan bergaya GoCorp, *Diagnostic Comparison Matrix*, *Trilogi Technopreneurship*, *Showcase Aplikasi Mobile Flutter*, dan formulir pendaftaran Mitra Driver / RT-RW.
-- **Pemicu Rahasia Admin**: Klik **3 kali berturut-turut** pada teks `© 2026 MORPH Eco Waste - Tim Pengembang TeknoHijau` di bagian paling bawah Footer (atau klik ikon gembok kecil di pojok kanan bawah) untuk membuka `/admin-login` (`admin@morph.id` / `morph2026`).
-- **Portal Admin Dashboard (`/admin`)**: Dilengkapi 4 KPI Cards utama, Grafik Analitik Bar & Donut Chart, Tabel *Live Order & Dispatch*, Peta Monitoring Armada Bandar Lampung, Pencairan Poin Reward, serta Inbox Kemitraan.
+### 1. Web Publik & Admin Dashboard (`/frontend` — Next.js ke Vercel)
+- **Akses Rahasia Admin dari Halaman Publik (`/`)**: Gulir ke bagian paling bawah Footer, lalu klik **3 kali berturut-turut** pada teks `© 2026 MORPH Eco Waste - Tim Pengembang TeknoHijau` (atau klik ikon gembok kecil di pojok kanan bawah) untuk menuju `/admin-login`, kemudian tekan tombol **"Masuk Dashboard Demo (1-Klik)"**.
 
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
-Akses di browser: `http://localhost:3000`
 
----
-
-### 2. Backend REST API & Database (`/backend`)
-Dibangun menggunakan **NestJS**, **TypeScript**, dan **Prisma ORM (PostgreSQL)**, serta dilengkapi **In-Memory Mock Fallback** otomatis agar tetap berjalan 100% lancar saat presentasi meskipun tanpa database lokal.
-
-1. Buat file `.env` di dalam folder `backend/`:
-   ```env
-   PORT=4000
-   DATABASE_URL="postgresql://postgres:12345678@localhost:5432/morph_db?schema=public"
-   ```
-2. Jalankan server NestJS:
-   ```bash
-   cd backend
-   npm install
-   npx prisma generate
-   npm run start:dev
-   ```
-Server API berjalan di: `http://localhost:4000` (`GET/POST /api/orders`, `PATCH /api/orders/:id/accept`, `PATCH /api/orders/:id/complete`, `GET/POST /api/orders/:id/chat`).
-
----
-
-### 3. Aplikasi Mobile Android Warga & Driver (`/mobile`)
-Dibangun menggunakan **Flutter** dengan standar arsitektur **GetX CLI (`get_cli`)** dan penyimpanan reaktif `GetStorage`. Memiliki fitur **Role Switcher Instan** (1 APK untuk mendemokan **Mode Warga** dan **Mode Mitra Driver**).
-
-- **6 Modul Utama (`mobile/lib/app/modules/`)**:
-  1. `onboarding`: Sambutan & pemilihan peran instan (*Warga* / *Mitra Driver*).
-  2. `warga_home`: Beranda bergaya Gojek, Dompet MORPH Points, 2 tombol raksasa (*Jemput Sampah Organik* & *Jemput Sampah Anorganik*), serta tab *Pesanan Saya (CRUD)*.
-  3. `warga_order`: Pemesanan jemputan dengan slider berat khusus satuan **Kilogram (Kg)**, titik peta OpenStreetMap Kedaton, radar pencarian driver, dan pelacakan armada.
-  4. `chat`: Obrolan *in-app* antara Warga dan Driver dengan *Quick Replies* sekali sentuh.
-  5. `rewards`: Katalog penukaran poin menjadi Sembako, Saldo GoPay/DANA, dan Pulsa/Token PLN.
-  6. `driver_dashboard`: Antarmuka Mitra Kebersihan bergaya GoPartner (Saklar Online/Offline, indikator kapasitas muatan gerobak, terima order, input timbangan aktual Kg, dan kirim poin otomatis).
-
+**Deploy ke Vercel via Terminal:**
 ```bash
-cd mobile
-flutter pub get
-flutter run --dart-define=MORPH_API_URL=https://frontend-three-smoky-67.vercel.app
+npx vercel --prod --yes --cwd frontend --scope andika-1180945f
 ```
 
 ---
 
-**© 2026 MORPH Eco Waste — Tim Pengembang TeknoHijau • Kota Bandar Lampung**
+### 2. Aplikasi Mobile Warga & Mitra Driver (`/mobile` — Flutter ke Firebase & APK)
+Menggunakan arsitektur **GetX CLI** dengan **Role Switcher Instan** (1 aplikasi untuk mendemokan **Mode Warga** dan **Mode Mitra Driver**), terhubung ke [`api_config.dart`](file:///d:/web%20projet%20andika/Technopreneurship/mobile/lib/app/data/services/api_config.dart) dengan *auto-fallback* ke `GetStorage` lokal.
+
+**Menjalankan di Lokal / Emulator:**
+```bash
+cd mobile
+flutter pub get
+flutter run --dart-define=API_URL=https://frontend-three-smoky-67.vercel.app/api/mobile
+```
+
+**Deploy Mobile Web ke Firebase Hosting:**
+```bash
+cd mobile
+flutter build web --release --dart-define=API_URL=https://frontend-three-smoky-67.vercel.app/api/mobile
+firebase deploy --only hosting
+```
+
+**Unduh File `.APK` Android dari GitHub Actions:**
+Setiap kali ada `git push origin main` yang mengubah folder `mobile/**`, GitHub Actions (`.github/workflows/build-mobile-apk.yml`) otomatis menjalankan `flutter build apk --release` dan menyediakan file **`MORPH-BandarLampung-Android.apk`** di tab **Actions** repositori GitHub Anda.
+
+---
+
+### 3. Backend REST API (`/backend` — NestJS & Prisma)
+Dilengkapi algoritma pencocokan kapasitas armada terdekat (`currentLoadKg + estimatedWeightKg <= maxCapacityKg`) serta *In-Memory Mock Fallback* otomatis jika PostgreSQL tidak aktif.
+
+```bash
+cd backend
+npm install
+npx prisma generate
+npm run start:dev
+```
+
+---
+
+**© 2026 MORPH Bandar Lampung — Tim Pengembang TeknoHijau**

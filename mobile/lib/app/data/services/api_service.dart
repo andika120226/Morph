@@ -2,24 +2,19 @@ import 'dart:async';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import '../models/order_model.dart';
+import 'api_config.dart';
 
 /// Service Integrasi REST API Flutter (api_service.dart)
-/// Menghubungkan Flutter GetX (Warga & Driver) ke NestJS (/api/orders) & Next.js Web Admin
-/// Dilengkapi Auto-Fallback Interceptor ke GetStorage jika sedang dalam mode lokal/offline.
+/// Menggunakan ApiConfig.baseUrl dengan blok try-catch dan fallback otomatis ke GetStorage lokal
 class ApiService extends GetConnect {
   final GetStorage _box = GetStorage();
-
-  // Base URL Server Backend NestJS / Next.js Vercel
-  static const String baseUrlEndpoint =
-      String.fromEnvironment('MORPH_API_URL', defaultValue: 'http://localhost:4000');
 
   @override
   void onInit() {
     super.onInit();
-    httpClient.baseUrl = baseUrlEndpoint;
+    httpClient.baseUrl = ApiConfig.baseUrl;
     httpClient.timeout = const Duration(seconds: 5);
 
-    // Request & Response Interceptor untuk logging & fallback
     httpClient.addRequestModifier<dynamic>((request) {
       request.headers['Content-Type'] = 'application/json';
       request.headers['Accept'] = 'application/json';
@@ -27,28 +22,31 @@ class ApiService extends GetConnect {
     });
   }
 
-  // 1. POST /api/orders -> Buat pesanan jemput sampah baru dari Mode Warga
+  // 1. POST /orders -> Buat pesanan jemput sampah baru dari Mode Warga
   Future<Map<String, dynamic>> createOrderToBackend(OrderModel order) async {
     final payload = {
       "id": order.id,
       "wargaId": "warga-budi-01",
       "citizenName": order.citizenName,
-      "category": order.isAnorganic && !order.isOrganic ? "ANORGANIK" : "ORGANIK",
+      "category":
+          order.isAnorganic && !order.isOrganic ? "ANORGANIK" : "ORGANIK",
       "estimatedWeightKg": order.estimatedKg,
+      "totalKg": order.estimatedKg,
       "pickupLat": order.latitude,
       "pickupLng": order.longitude,
+      "address": order.address,
       "addressText": order.address,
       "district": order.district,
     };
 
     try {
-      final response = await post('/api/orders', payload);
+      final response = await post(ApiConfig.ordersEndpoint, payload);
       if (response.status.isOk && response.body != null) {
         _cacheLocalOrder(order);
         return Map<String, dynamic>.from(response.body);
       }
     } catch (_) {
-      // Fallback otomatis ke GetStorage jika server lokal sedang offline
+      // Fallback otomatis ke GetStorage lokal jika sedang offline / demo
     }
 
     _cacheLocalOrder(order);
@@ -58,10 +56,10 @@ class ApiService extends GetConnect {
     };
   }
 
-  // 2. GET /api/orders -> Ambil seluruh daftar pesanan
+  // 2. GET /orders -> Ambil seluruh daftar pesanan
   Future<List<OrderModel>> fetchOrdersFromBackend() async {
     try {
-      final response = await get('/api/orders');
+      final response = await get(ApiConfig.ordersEndpoint);
       if (response.status.isOk &&
           response.body != null &&
           response.body['data'] is List) {
@@ -71,7 +69,7 @@ class ApiService extends GetConnect {
             .toList();
       }
     } catch (_) {
-      // Fallback baca dari GetStorage
+      // Fallback otomatis membaca dari GetStorage
     }
 
     final saved = _box.read<List>('morph_orders_list');
@@ -83,7 +81,7 @@ class ApiService extends GetConnect {
     return [];
   }
 
-  // 3. PATCH /api/orders/:id/accept -> Driver menerima pesanan (status -> ON_THE_WAY)
+  // 3. PATCH /orders -> Driver menerima pesanan (status -> ON_THE_WAY)
   Future<bool> acceptOrderOnBackend({
     required String orderId,
     String driverId = "driver-hendra-01",
@@ -91,25 +89,30 @@ class ApiService extends GetConnect {
     String plateNumber = "BE 4521 YX",
   }) async {
     try {
-      final response = await patch('/api/orders/$orderId/accept', {
+      final response = await patch(ApiConfig.ordersEndpoint, {
+        "id": orderId,
+        "status": "ON_THE_WAY",
         "driverId": driverId,
         "driverName": driverName,
-        "plateNumber": plateNumber,
+        "vehiclePlate": plateNumber,
       });
       if (response.status.isOk) return true;
     } catch (_) {
-      // Fallback ke penyimpanan lokal GetStorage
+      // Fallback ke GetStorage
     }
     return true;
   }
 
-  // 4. PATCH /api/orders/:id/complete -> Driver menimbang berat aktual & kirim poin
+  // 4. PATCH /orders -> Driver menimbang berat aktual & kirim poin
   Future<Map<String, dynamic>> completeOrderOnBackend({
     required String orderId,
     required double actualWeightKg,
   }) async {
     try {
-      final response = await patch('/api/orders/$orderId/complete', {
+      final response = await patch(ApiConfig.ordersEndpoint, {
+        "id": orderId,
+        "status": "COMPLETED",
+        "totalKg": actualWeightKg,
         "actualWeightKg": actualWeightKg,
       });
       if (response.status.isOk && response.body != null) {
@@ -126,25 +129,13 @@ class ApiService extends GetConnect {
     };
   }
 
-  // 5. GET & POST /api/orders/:id/chat -> Sinkronisasi chat Warga <-> Driver
-  Future<void> postChatMessageToBackend({
-    required String orderId,
-    required String senderRole,
-    required String message,
-  }) async {
-    try {
-      await post('/api/orders/$orderId/chat', {
-        "senderRole": senderRole,
-        "message": message,
-      });
-    } catch (_) {
-      // Tersimpan di state reaktif lokal
-    }
-  }
-
   void _cacheLocalOrder(OrderModel order) {
-    final List existing = _box.read<List>('morph_orders_list') ?? [];
-    existing.insert(0, order.toJson());
-    _box.write('morph_orders_list', existing);
+    try {
+      final List existing = _box.read<List>('morph_orders_list') ?? [];
+      existing.insert(0, order.toJson());
+      _box.write('morph_orders_list', existing);
+    } catch (_) {
+      // Ignore storage error
+    }
   }
 }

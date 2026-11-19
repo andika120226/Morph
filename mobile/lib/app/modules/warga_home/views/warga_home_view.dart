@@ -649,7 +649,7 @@ class WargaHomeView extends GetView<WargaHomeController> {
             ),
             const SizedBox(height: 8),
             const Text(
-              "Tukarkan poin hasil pilah sampah Anda menjadi Beras 5 Kg, Minyak Goreng, Pulsa, atau Saldo GoPay/DANA.",
+              "Tukarkan poin hasil pilah sampah Anda menjadi Beras 5 Kg, Minyak Goreng, Pulsa, atau Saldo Dompet Digital MORPH Pay.",
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 13, color: Color(0xFF64748B)),
             ),
@@ -724,7 +724,7 @@ class WargaHomeView extends GetView<WargaHomeController> {
             onPressed: controller.switchToDriverMode,
             icon: const Icon(Icons.swap_horiz_rounded),
             label: const Text(
-              "Beralih ke Mode Mitra Driver (GoPartner)",
+              "Beralih ke Mode Mitra Driver (MORPH Partner)",
               style: TextStyle(fontSize: 15, fontWeight: FontWeight.w900),
             ),
             style: ElevatedButton.styleFrom(

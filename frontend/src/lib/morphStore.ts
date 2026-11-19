@@ -309,7 +309,7 @@ export const INITIAL_REWARD_REDEMPTIONS: RewardRedemptionItem[] = [
     citizenPhone: "0812-7741-9021",
     district: "Kedaton",
     pointsCost: 5000,
-    rewardTitle: "Saldo GoPay / DANA Rp 50.000",
+    rewardTitle: "Saldo Dompet Digital MORPH Pay Rp 50.000",
     rewardCategory: "E-Wallet",
     equivalentRupiah: 50000,
     requestedAt: "Hari ini, 10:15 WIB",

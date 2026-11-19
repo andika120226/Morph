@@ -1,0 +1,11 @@
+{
+  "name": "MORPH Bandar Lampung",
+  "short_name": "MORPH",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#FFFFFF",
+  "theme_color": "#00880D",
+  "description": "Academic Technopreneurship Prototype - MORPH Smart Waste Ecosystem Bandar Lampung",
+  "orientation": "portrait-primary",
+  "prefer_related_applications": false
+}

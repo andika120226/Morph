@@ -533,7 +533,7 @@ export default function SecretAdminDashboardPage() {
       citizenPhone: "0812-7789-3310",
       district: "Way Halim",
       pointsCost: 5000,
-      rewardTitle: "Saldo DANA / GoPay Rp 50.000",
+      rewardTitle: "Saldo Dompet Digital MORPH Pay Rp 50.000",
       rewardCategory: "E-Wallet",
       equivalentRupiah: 50000,
       requestedAt: "Baru saja",
@@ -1675,7 +1675,7 @@ export default function SecretAdminDashboardPage() {
                     Persetujuan Pencairan Poin Reward Warga (Ekonomi Sirkular)
                   </h2>
                   <p className="text-xs text-slate-500">
-                    Kelola permintaan penukaran Poin MORPH dari aplikasi mobile menjadi Saldo GoPay/DANA, Beras 5 Kg, atau Token PLN.
+                    Kelola permintaan penukaran Poin MORPH dari aplikasi mobile menjadi Saldo Dompet Digital, Beras 5 Kg, atau Token PLN.
                   </p>
                 </div>
 

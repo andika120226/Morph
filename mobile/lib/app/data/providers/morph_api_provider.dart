@@ -33,7 +33,7 @@ class MorphApiProvider extends GetConnect {
   final RxList<RewardCatalogModel> rewardCatalog = <RewardCatalogModel>[
     RewardCatalogModel(
       id: "RWD-01",
-      title: "Saldo GoPay / DANA Rp 10.000",
+      title: "Saldo Dompet Digital MORPH Pay Rp 10.000",
       subtitle: "Cair instan ke nomor HP keluarga Budi",
       category: "E-Wallet",
       pointsCost: 1000,

@@ -16,7 +16,7 @@ class DriverDashboardView extends GetView<DriverDashboardController> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              "MORPH Mitra Driver (GoPartner)",
+              "MORPH Mitra Driver (MORPH Partner)",
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900),
             ),
             Text(

@@ -112,7 +112,7 @@ class OnboardingView extends GetView<OnboardingController> {
                     ),
                     const SizedBox(height: 16),
                     const Text(
-                      "Jemput Sampah Semudah Panggil Ojek Online",
+                      "Jemput Sampah Terpilah Langsung dari Rumah Anda",
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 22,
@@ -176,7 +176,7 @@ class OnboardingView extends GetView<OnboardingController> {
                   color: Color(0xFF00880D),
                 ),
                 label: const Text(
-                  "Masuk sebagai Mitra Driver (GoPartner)",
+                  "Masuk sebagai Mitra Driver (MORPH Partner)",
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w800,
