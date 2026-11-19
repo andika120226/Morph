@@ -1,17 +1,14 @@
-name: Build MORPH Bandar Lampung Android APK
+name: Build MORPH-BandarLampung.apk
 
 on:
   push:
     branches:
       - main
-    paths:
-      - "mobile/**"
-      - ".github/workflows/build-mobile-apk.yml"
   workflow_dispatch:
 
 jobs:
   build-android-apk:
-    name: Build Release APK (Flutter Stable + Java 17)
+    name: Build MORPH-BandarLampung.apk (Flutter Stable + Java 17)
     runs-on: ubuntu-latest
 
     defaults:
@@ -34,21 +31,23 @@ jobs:
           channel: "stable"
           cache: true
 
-      - name: Ensure Native Android & Web Scaffolding Exists
-        run: flutter create . --platforms=android,web --project-name morph_bandar_lampung --org id.morph
+      - name: Generate Clean Android Gradle Scaffolding
+        run: |
+          rm -rf android
+          flutter create . --platforms=android,web --project-name morph_bandar_lampung
 
       - name: Install Flutter Dependencies
         run: flutter pub get
 
       - name: Build Release APK
-        run: flutter build apk --release --dart-define=API_URL=https://frontend-three-smoky-67.vercel.app/api/mobile
+        run: flutter build apk --release --no-tree-shake-icons --dart-define=API_URL=https://frontend-three-smoky-67.vercel.app/api/mobile
 
-      - name: Rename APK Artifact
-        run: cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/MORPH-BandarLampung-Android.apk
+      - name: Prepare MORPH-BandarLampung.apk
+        run: cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/MORPH-BandarLampung.apk
 
-      - name: Upload MORPH-BandarLampung-Android.apk Artifact
+      - name: Upload MORPH-BandarLampung.apk Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: MORPH-BandarLampung-Android.apk
-          path: mobile/build/app/outputs/flutter-apk/MORPH-BandarLampung-Android.apk
+          name: MORPH-BandarLampung.apk
+          path: mobile/build/app/outputs/flutter-apk/MORPH-BandarLampung.apk
           if-no-files-found: error
