@@ -1,53 +1,19 @@
 import { NextResponse } from "next/server";
-
-export interface InboxSubmission {
-  id: string;
-  fullName: string;
-  contact: string;
-  category: string;
-  district: string;
-  message: string;
-  status: "BARU" | "DIPROSES" | "SELESAI";
-  createdAt: string;
-}
-
-// In-memory store for serverless preview (complemented by localStorage 'morph_inbox' on client)
-const memoryInbox: InboxSubmission[] = [
-  {
-    id: "INB-BDL-101",
-    fullName: "Hendra Wijaya (Ketua RT 04)",
-    contact: "0812-7788-9900",
-    category: "Kerjasama RT-RW",
-    district: "Way Halim",
-    message:
-      "Pengajuan integrasi penjemputan sampah terjadwal untuk 85 KK di lingkungan RT 04 Kelurahan Way Halim Permai.",
-    status: "BARU",
-    createdAt: "2026-10-28T08:30:00.000Z",
-  },
-  {
-    id: "INB-BDL-102",
-    fullName: "Ahmad Fauzi",
-    contact: "0853-6611-2233",
-    category: "Daftar Driver",
-    district: "Kedaton",
-    message:
-      "Ingin bergabung sebagai Mitra Driver armada Motor Roda Tiga / Pickup area Kedaton dan Rajabasa.",
-    status: "DIPROSES",
-    createdAt: "2026-10-28T09:15:00.000Z",
-  },
-];
+import { PartnerInboxItem } from "@/lib/morphStore";
+import { morphHybridStore } from "@/lib/supabase";
 
 export async function GET() {
+  const data = await morphHybridStore.getInbox();
   return NextResponse.json({
     status: "success",
-    data: memoryInbox,
+    data,
   });
 }
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const newEntry: InboxSubmission = {
+    const newEntry: PartnerInboxItem = {
       id: body.id || `INB-BDL-${Math.floor(100 + Math.random() * 900)}`,
       fullName: body.fullName || "Anonim",
       contact: body.contact || "-",
@@ -58,7 +24,7 @@ export async function POST(request: Request) {
       createdAt: body.createdAt || new Date().toISOString(),
     };
 
-    memoryInbox.unshift(newEntry);
+    await morphHybridStore.insertInbox(newEntry);
 
     return NextResponse.json(
       {

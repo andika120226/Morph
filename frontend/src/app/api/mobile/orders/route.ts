@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { morphServerStore, MobileOrder } from "@/lib/morphStore";
+import { morphHybridStore, isSupabaseConfigured } from "@/lib/supabase";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -15,12 +16,15 @@ export async function OPTIONS() {
 }
 
 export async function GET() {
+  const orders = await morphHybridStore.getOrders();
   return NextResponse.json(
     {
       status: "success",
-      syncEngine: "MORPH Mobile Sync API v2.0",
-      count: morphServerStore.orders.length,
-      data: morphServerStore.orders,
+      syncEngine: isSupabaseConfigured
+        ? "MORPH Cloud Supabase Sync"
+        : "MORPH Hybrid In-Memory Sync",
+      count: orders.length,
+      data: orders,
     },
     { headers: CORS_HEADERS }
   );
@@ -59,7 +63,7 @@ export async function POST(request: Request) {
       longitude: Number(body.longitude ?? 105.2586),
     };
 
-    morphServerStore.orders.unshift(newOrder);
+    await morphHybridStore.upsertOrder(newOrder);
 
     return NextResponse.json(
       {
@@ -82,16 +86,18 @@ export async function PATCH(request: Request) {
     const body = await request.json();
     const { id, status, driverId, driverName, vehiclePlate, totalKg } = body;
 
-    const index = morphServerStore.orders.findIndex((o) => o.id === id);
-    if (index === -1) {
+    const currentOrders = await morphHybridStore.getOrders();
+    const existing = currentOrders.find((o) => o.id === id);
+
+    if (!existing) {
       return NextResponse.json(
         { status: "error", message: "Order tidak ditemukan." },
         { status: 404, headers: CORS_HEADERS }
       );
     }
 
-    const existing = morphServerStore.orders[index];
-    const updatedWeight = totalKg !== undefined ? Number(totalKg) : existing.totalKg;
+    const updatedWeight =
+      totalKg !== undefined ? Number(totalKg) : existing.totalKg;
 
     const updated: MobileOrder = {
       ...existing,
@@ -104,7 +110,7 @@ export async function PATCH(request: Request) {
       pointsAwarded: Math.round(updatedWeight * 10),
     };
 
-    morphServerStore.orders[index] = updated;
+    await morphHybridStore.upsertOrder(updated);
 
     return NextResponse.json(
       {
@@ -133,7 +139,9 @@ export async function DELETE(request: Request) {
       );
     }
 
-    morphServerStore.orders = morphServerStore.orders.filter((o) => o.id !== id);
+    morphServerStore.orders = morphServerStore.orders.filter(
+      (o) => o.id !== id
+    );
 
     return NextResponse.json(
       {

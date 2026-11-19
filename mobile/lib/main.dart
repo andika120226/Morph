@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'app/data/providers/morph_api_provider.dart';
+import 'app/data/services/api_config.dart';
 import 'app/data/services/api_service.dart';
 import 'app/routes/app_pages.dart';
 
@@ -9,7 +11,19 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await GetStorage.init();
 
-  // Inisialisasi ApiService (NestJS /api/orders) & Global Reactive Store
+  // Inisialisasi Cloud Supabase dalam blok try-catch (Safe Dummy Fallback jika env belum diisi)
+  if (ApiConfig.hasSupabaseConfig) {
+    try {
+      await Supabase.initialize(
+        url: ApiConfig.supabaseUrl,
+        anonKey: ApiConfig.supabaseAnonKey,
+      );
+    } catch (_) {
+      // Otomatis fallback ke GetStorage & API Bridge
+    }
+  }
+
+  // Inisialisasi ApiService & Global Reactive Store
   Get.put<ApiService>(ApiService(), permanent: true);
   Get.put<MorphApiProvider>(MorphApiProvider(), permanent: true);
 

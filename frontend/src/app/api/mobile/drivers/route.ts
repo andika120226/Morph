@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { morphServerStore, FleetDriver } from "@/lib/morphStore";
+import { morphHybridStore, isSupabaseConfigured } from "@/lib/supabase";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -15,12 +16,15 @@ export async function OPTIONS() {
 }
 
 export async function GET() {
+  const drivers = await morphHybridStore.getDrivers();
   return NextResponse.json(
     {
       status: "success",
-      syncEngine: "MORPH Fleet Sync API v2.0",
-      count: morphServerStore.drivers.length,
-      data: morphServerStore.drivers,
+      syncEngine: isSupabaseConfigured
+        ? "MORPH Cloud Supabase Fleet Sync"
+        : "MORPH Hybrid In-Memory Fleet Sync",
+      count: drivers.length,
+      data: drivers,
     },
     { headers: CORS_HEADERS }
   );
@@ -45,7 +49,7 @@ export async function POST(request: Request) {
       longitude: Number(body.longitude ?? 105.2586),
     };
 
-    morphServerStore.drivers.unshift(newDriver);
+    await morphHybridStore.upsertDriver(newDriver);
 
     return NextResponse.json(
       {
@@ -68,24 +72,27 @@ export async function PATCH(request: Request) {
     const body = await request.json();
     const { id, ...updates } = body;
 
-    const index = morphServerStore.drivers.findIndex((d) => d.id === id);
-    if (index === -1) {
+    const currentDrivers = await morphHybridStore.getDrivers();
+    const existing = currentDrivers.find((d) => d.id === id);
+    if (!existing) {
       return NextResponse.json(
         { status: "error", message: "Driver tidak ditemukan." },
         { status: 404, headers: CORS_HEADERS }
       );
     }
 
-    morphServerStore.drivers[index] = {
-      ...morphServerStore.drivers[index],
+    const updatedDriver: FleetDriver = {
+      ...existing,
       ...updates,
     };
+
+    await morphHybridStore.upsertDriver(updatedDriver);
 
     return NextResponse.json(
       {
         status: "success",
         message: `Data driver ${id} berhasil diperbarui.`,
-        data: morphServerStore.drivers[index],
+        data: updatedDriver,
       },
       { headers: CORS_HEADERS }
     );
