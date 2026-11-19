@@ -1,12 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../../data/models/order_model.dart';
-import '../../data/providers/morph_api_provider.dart';
-import '../../routes/app_routes.dart';
+import '../../../data/models/order_model.dart';
+import '../../../data/providers/morph_api_provider.dart';
+import '../../../routes/app_routes.dart';
 
 class DriverDashboardController extends GetxController {
   final MorphApiProvider store = Get.find<MorphApiProvider>();
   final RxDouble actualWeighedKg = 5.0.obs;
+  final RxInt currentBottomTab = 0.obs; // 0: Beranda, 1: Riwayat Jemput, 2: Pendapatan, 3: Profil Mitra
+
+  final RxInt todayIncentiveRp = 85000.obs;
+  final RxInt todayCompletedTasks = 6.obs;
+  final RxDouble todayTotalHauledKg = 42.5.obs;
 
   @override
   void onInit() {
@@ -17,13 +22,16 @@ class DriverDashboardController extends GetxController {
     }
   }
 
+  void switchTab(int index) {
+    currentBottomTab.value = index;
+  }
+
   void toggleOnlineStatus(bool val) {
     store.isDriverOnline.value = val;
   }
 
-  void switchBackToWargaMode() {
-    store.switchRole("WARGA");
-    Get.offAllNamed(Routes.WARGA_HOME);
+  void logoutToOnboarding() {
+    Get.offAllNamed(Routes.ONBOARDING);
   }
 
   // Langkah 1 Driver: Terima Tugas Jemput
@@ -39,12 +47,12 @@ class DriverDashboardController extends GetxController {
   }
 
   // Langkah 2 Driver: Saya Sudah Sampai di Lokasi
-  void confirmArrivedAtCitizenHome(OrderModel order) {
+  void confirmArrivedAtLocation(OrderModel order) {
     actualWeighedKg.value = order.estimatedKg;
     store.markDriverArrived(order.id);
     Get.snackbar(
-      "Tiba di Lokasi Warga 📍",
-      "Silakan timbang sampah warga dan sesuaikan berat aktual (Kg).",
+      "Tiba di Lokasi Jemput 📍",
+      "Silakan timbang sampah dan sesuaikan berat aktual (Kg).",
       backgroundColor: const Color(0xFF0F172A),
       colorText: Colors.white,
     );
@@ -70,9 +78,13 @@ class DriverDashboardController extends GetxController {
       verifiedActualKg: actualWeighedKg.value,
     );
 
+    todayCompletedTasks.value += 1;
+    todayTotalHauledKg.value += actualWeighedKg.value;
+    todayIncentiveRp.value += (actualWeighedKg.value * 2500).round();
+
     Get.snackbar(
       "Penjemputan Selesai! +$earnedPts Poin Terkirim 🎉",
-      "Saldo Poin Keluarga Budi otomatis bertambah +$earnedPts Poin & muatan gerobak ter-update.",
+      "Poin pengguna bertambah +$earnedPts Poin & muatan gerobak ter-update.",
       backgroundColor: const Color(0xFF00880D),
       colorText: Colors.white,
       duration: const Duration(seconds: 4),

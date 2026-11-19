@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../../data/models/order_model.dart';
-import '../../data/providers/morph_api_provider.dart';
-import '../../routes/app_routes.dart';
+import '../../../data/models/order_model.dart';
+import '../../../data/providers/morph_api_provider.dart';
+import '../../../routes/app_routes.dart';
 
 class WargaHomeController extends GetxController {
   final MorphApiProvider store = Get.find<MorphApiProvider>();
   final RxInt currentBottomTab = 0.obs; // 0: Beranda, 1: Pesanan Saya, 2: Tukar Poin, 3: Profil
+  final RxString searchQuery = "".obs;
+  final TextEditingController searchCtrl = TextEditingController();
 
   void switchTab(int index) {
     currentBottomTab.value = index;
@@ -16,12 +18,11 @@ class WargaHomeController extends GetxController {
     Get.toNamed(Routes.WARGA_ORDER, arguments: categoryType);
   }
 
-  void switchToDriverMode() {
-    store.switchRole("DRIVER");
-    Get.toNamed(Routes.DRIVER_DASHBOARD);
+  void logoutToOnboarding() {
+    Get.offAllNamed(Routes.ONBOARDING);
   }
 
-  // UPDATE CRUD Dialog: Edit Estimasi Berat (Kg) & Catatan Patokan Rumah
+  // UPDATE Dialog: Edit Estimasi Berat (Kg) & Catatan Patokan Rumah
   void showEditOrderDialog(BuildContext context, OrderModel order) {
     final RxDouble tempKg = order.estimatedKg.obs;
     final TextEditingController noteCtrl =
@@ -121,5 +122,11 @@ class WargaHomeController extends GetxController {
         ],
       ),
     );
+  }
+
+  @override
+  void onClose() {
+    searchCtrl.dispose();
+    super.onClose();
   }
 }

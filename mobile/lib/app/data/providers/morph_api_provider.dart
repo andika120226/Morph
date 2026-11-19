@@ -1,13 +1,11 @@
 import 'dart:async';
 import 'package:get/get.dart';
-import 'package:get_storage/get_storage.dart';
 import '../models/order_model.dart';
 import '../services/api_service.dart';
 
-/// HTTP Service Provider (GetConnect) & Reactive Store (GetStorage + Rx)
-/// Menyinkronkan aplikasi mobile Warga & Mitra Driver dengan NestJS & Web Admin Dashboard
+/// HTTP Service Provider (GetConnect) & Reactive Store (Rx)
+/// Menyinkronkan aplikasi mobile & Mitra Driver dengan NestJS & Web Admin Dashboard
 class MorphApiProvider extends GetConnect {
-  final GetStorage _storage = GetStorage();
   ApiService get _api => Get.find<ApiService>();
 
   // URL Web Admin Dashboard di Vercel (dengan fallback offline 100% aman)
@@ -82,51 +80,37 @@ class MorphApiProvider extends GetConnect {
   }
 
   void _loadInitialData() {
-    final savedPoints = _storage.read<int>("morph_wallet_points");
-    if (savedPoints != null) {
-      walletPoints.value = savedPoints;
-    }
-
-    final savedOrdersRaw = _storage.read<List>("morph_orders_list");
-    if (savedOrdersRaw != null && savedOrdersRaw.isNotEmpty) {
-      final loaded = savedOrdersRaw
-          .map((e) => OrderModel.fromJson(Map<String, dynamic>.from(e)))
-          .toList();
-      orders.assignAll(loaded);
-    } else {
-      // Seed dummy data awal yang realistis di Bandar Lampung
-      orders.assignAll([
-        OrderModel(
-          id: "MRP-8816",
-          citizenName: "Keluarga Budi",
-          address: "Jl. ZA. Pagar Alam No. 45, Kedaton, Bandar Lampung",
-          district: "Kedaton",
-          landmarkNote: "Di depan pagar rumah cat putih",
-          isOrganic: false,
-          isAnorganic: true,
-          estimatedKg: 6.0,
-          actualKg: 6.0,
-          pointsEarned: 90,
-          status: MorphOrderState.completed,
-          createdAtLabel: "Kemarin, 16:15 WIB",
-        ),
-        OrderModel(
-          id: "MRP-8809",
-          citizenName: "Keluarga Budi",
-          address: "Jl. ZA. Pagar Alam No. 45, Kedaton, Bandar Lampung",
-          district: "Kedaton",
-          landmarkNote: "Di dekat pos satpam",
-          isOrganic: true,
-          isAnorganic: false,
-          estimatedKg: 8.0,
-          actualKg: 8.0,
-          pointsEarned: 80,
-          status: MorphOrderState.completed,
-          createdAtLabel: "3 Hari lalu, 09:20 WIB",
-        ),
-      ]);
-      _persistOrders();
-    }
+    // Seed dummy data awal yang realistis di Bandar Lampung
+    orders.assignAll([
+      OrderModel(
+        id: "MRP-8816",
+        citizenName: "Budi Santoso",
+        address: "Jl. ZA. Pagar Alam No. 45, Kedaton, Bandar Lampung",
+        district: "Kedaton",
+        landmarkNote: "Di depan pagar rumah cat putih",
+        isOrganic: false,
+        isAnorganic: true,
+        estimatedKg: 6.0,
+        actualKg: 6.0,
+        pointsEarned: 90,
+        status: MorphOrderState.completed,
+        createdAtLabel: "Kemarin, 16:15 WIB",
+      ),
+      OrderModel(
+        id: "MRP-8809",
+        citizenName: "Budi Santoso",
+        address: "Jl. ZA. Pagar Alam No. 45, Kedaton, Bandar Lampung",
+        district: "Kedaton",
+        landmarkNote: "Di dekat pos satpam",
+        isOrganic: true,
+        isAnorganic: false,
+        estimatedKg: 8.0,
+        actualKg: 8.0,
+        pointsEarned: 80,
+        status: MorphOrderState.completed,
+        createdAtLabel: "3 Hari lalu, 09:20 WIB",
+      ),
+    ]);
 
     _refreshActiveOrderPointer();
 
@@ -144,11 +128,6 @@ class MorphApiProvider extends GetConnect {
   }
 
   void _persistOrders() {
-    _storage.write(
-      "morph_orders_list",
-      orders.map((o) => o.toJson()).toList(),
-    );
-    _storage.write("morph_wallet_points", walletPoints.value);
     _refreshActiveOrderPointer();
   }
 
@@ -350,13 +329,12 @@ class MorphApiProvider extends GetConnect {
     }
   }
 
-  // REWARD: Tukar Poin Warga
+  // REWARD: Tukar Poin
   bool redeemReward(RewardCatalogModel reward) {
     if (walletPoints.value < reward.pointsCost) {
       return false;
     }
     walletPoints.value -= reward.pointsCost;
-    _storage.write("morph_wallet_points", walletPoints.value);
     return true;
   }
 }

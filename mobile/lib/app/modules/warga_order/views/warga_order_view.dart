@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../../routes/app_routes.dart';
+import '../../../routes/app_routes.dart';
 import '../controllers/warga_order_controller.dart';
 
 class WargaOrderView extends GetView<WargaOrderController> {
@@ -53,7 +53,7 @@ class WargaOrderView extends GetView<WargaOrderController> {
                       ),
                     ),
 
-                    // Pin Rumah Warga di Tengah Peta
+                    // Pin Rumah Pengguna di Tengah Peta
                     Center(
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
@@ -68,7 +68,7 @@ class WargaOrderView extends GetView<WargaOrderController> {
                               borderRadius: BorderRadius.circular(14),
                             ),
                             child: const Text(
-                              "📍 Rumah Keluarga Budi (Kedaton)",
+                              "📍 Rumah Budi Santoso (Kedaton)",
                               style: TextStyle(
                                 color: Colors.white,
                                 fontSize: 11,
@@ -644,22 +644,6 @@ class WargaOrderView extends GetView<WargaOrderController> {
                 ),
               ),
             ],
-          ),
-          const SizedBox(height: 10),
-
-          // Tombol Pintas Demo Beralih ke Mode Driver untuk Menyelesaikan Jemputan
-          TextButton.icon(
-            onPressed: controller.openDriverModeForDemo,
-            icon: const Icon(Icons.swap_horiz_rounded,
-                color: Color(0xFF059669)),
-            label: const Text(
-              "Simulasi Demo: Buka Mode Mitra Driver & Timbang Sampah",
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w800,
-                color: Color(0xFF059669),
-              ),
-            ),
           ),
         ],
       ),

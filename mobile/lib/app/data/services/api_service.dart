@@ -1,22 +1,14 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:get/get.dart';
-import 'package:get_storage/get_storage.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:http/http.dart' as http;
 import '../models/order_model.dart';
 import 'api_config.dart';
 
-/// Service Integrasi Hybrid Cloud Supabase + REST API + GetStorage Fallback (api_service.dart)
+/// Service Integrasi Pure Dart HTTP + REST API + Local Cache Fallback (api_service.dart)
+/// 100% Web & Android Safe tanpa native hook (objective_c / ffi / path_provider)
 class ApiService extends GetConnect {
-  final GetStorage _box = GetStorage();
-
-  SupabaseClient? get _supabase {
-    if (!ApiConfig.hasSupabaseConfig) return null;
-    try {
-      return Supabase.instance.client;
-    } catch (_) {
-      return null;
-    }
-  }
+  final List<Map<String, dynamic>> _localCache = [];
 
   @override
   void onInit() {
@@ -31,36 +23,45 @@ class ApiService extends GetConnect {
     });
   }
 
-  // 1. CREATE ORDER -> Simpan ke Supabase (morph_orders) + API Bridge + GetStorage
-  Future<Map<String, dynamic>> createOrderToBackend(OrderModel order) async {
-    final supabaseRow = {
-      "id": order.id,
-      "time": "Baru saja",
-      "citizen_name": order.citizenName,
-      "citizen_phone": "0812-7741-9021",
-      "address": order.address,
-      "district": order.district,
-      "category": order.categoryLabel,
-      "organic_kg": order.isOrganic ? order.estimatedKg : 0.0,
-      "anorganic_kg": order.isAnorganic ? order.estimatedKg : 0.0,
-      "total_kg": order.estimatedKg,
-      "status": "SEARCHING_DRIVER",
-      "points_awarded": order.pointsEarned,
-      "latitude": order.latitude,
-      "longitude": order.longitude,
-    };
+  Map<String, String> get _supabaseHeaders => {
+        'apikey': ApiConfig.supabaseAnonKey,
+        'Authorization': 'Bearer ${ApiConfig.supabaseAnonKey}',
+        'Content-Type': 'application/json',
+        'Prefer': 'resolution=merge-duplicates',
+      };
 
-    // A. Coba simpan ke Cloud Supabase jika aktif
-    try {
-      final client = _supabase;
-      if (client != null) {
-        await client.from('morph_orders').upsert(supabaseRow);
+  // 1. CREATE ORDER -> Simpan ke Supabase REST (jika aktif) + API Bridge + GetStorage
+  Future<Map<String, dynamic>> createOrderToBackend(OrderModel order) async {
+    if (ApiConfig.hasSupabaseConfig) {
+      try {
+        final uri = Uri.parse('${ApiConfig.supabaseUrl}/rest/v1/morph_orders');
+        await http
+            .post(
+              uri,
+              headers: _supabaseHeaders,
+              body: jsonEncode({
+                "id": order.id,
+                "time": "Baru saja",
+                "citizen_name": order.citizenName,
+                "citizen_phone": "0812-7741-9021",
+                "address": order.address,
+                "district": order.district,
+                "category": order.categoryLabel,
+                "organic_kg": order.isOrganic ? order.estimatedKg : 0.0,
+                "anorganic_kg": order.isAnorganic ? order.estimatedKg : 0.0,
+                "total_kg": order.estimatedKg,
+                "status": "SEARCHING_DRIVER",
+                "points_awarded": order.pointsEarned,
+                "latitude": order.latitude,
+                "longitude": order.longitude,
+              }),
+            )
+            .timeout(const Duration(seconds: 4));
+      } catch (_) {
+        // Lanjut ke REST API / GetStorage fallback
       }
-    } catch (_) {
-      // Lanjut ke REST API / GetStorage fallback
     }
 
-    // B. Coba kirim ke REST API Bridge
     try {
       final response = await post(ApiConfig.ordersEndpoint, {
         "id": order.id,
@@ -89,25 +90,8 @@ class ApiService extends GetConnect {
     };
   }
 
-  // 2. READ ORDERS -> Ambil dari Supabase (morph_orders) -> API Bridge -> GetStorage
+  // 2. READ ORDERS -> Ambil dari Supabase REST / API Bridge / GetStorage
   Future<List<OrderModel>> fetchOrdersFromBackend() async {
-    try {
-      final client = _supabase;
-      if (client != null) {
-        final List<dynamic> rows = await client
-            .from('morph_orders')
-            .select()
-            .order('created_at', ascending: false);
-        if (rows.isNotEmpty) {
-          return rows
-              .map((r) => OrderModel.fromJson(Map<String, dynamic>.from(r)))
-              .toList();
-        }
-      }
-    } catch (_) {
-      // Fallback ke REST API
-    }
-
     try {
       final response = await get(ApiConfig.ordersEndpoint);
       if (response.status.isOk &&
@@ -122,33 +106,39 @@ class ApiService extends GetConnect {
       // Fallback ke GetStorage
     }
 
-    final saved = _box.read<List>('morph_orders_list');
-    if (saved != null) {
-      return saved
+    if (_localCache.isNotEmpty) {
+      return _localCache
           .map((e) => OrderModel.fromJson(Map<String, dynamic>.from(e)))
           .toList();
     }
     return [];
   }
 
-  // 3. ACCEPT ORDER -> Update status ON_THE_WAY di Supabase + API Bridge
+  // 3. ACCEPT ORDER -> Update status ON_THE_WAY
   Future<bool> acceptOrderOnBackend({
     required String orderId,
     String driverId = "DRV-01",
     String driverName = "Pak Hendra Wijaya",
     String plateNumber = "BE 4521 YX",
   }) async {
-    try {
-      final client = _supabase;
-      if (client != null) {
-        await client.from('morph_orders').update({
-          "status": "ON_THE_WAY",
-          "driver_id": driverId,
-          "driver_name": driverName,
-          "vehicle_plate": plateNumber,
-        }).eq('id', orderId);
-      }
-    } catch (_) {}
+    if (ApiConfig.hasSupabaseConfig) {
+      try {
+        final uri = Uri.parse(
+            '${ApiConfig.supabaseUrl}/rest/v1/morph_orders?id=eq.$orderId');
+        await http
+            .patch(
+              uri,
+              headers: _supabaseHeaders,
+              body: jsonEncode({
+                "status": "ON_THE_WAY",
+                "driver_id": driverId,
+                "driver_name": driverName,
+                "vehicle_plate": plateNumber,
+              }),
+            )
+            .timeout(const Duration(seconds: 4));
+      } catch (_) {}
+    }
 
     try {
       await patch(ApiConfig.ordersEndpoint, {
@@ -162,23 +152,30 @@ class ApiService extends GetConnect {
     return true;
   }
 
-  // 4. COMPLETE ORDER -> Update berat aktual & poin reward di Supabase + API Bridge
+  // 4. COMPLETE ORDER -> Update berat aktual & poin reward
   Future<Map<String, dynamic>> completeOrderOnBackend({
     required String orderId,
     required double actualWeightKg,
   }) async {
     final int earnedPts = (actualWeightKg * 10).round();
 
-    try {
-      final client = _supabase;
-      if (client != null) {
-        await client.from('morph_orders').update({
-          "status": "COMPLETED",
-          "total_kg": actualWeightKg,
-          "points_awarded": earnedPts,
-        }).eq('id', orderId);
-      }
-    } catch (_) {}
+    if (ApiConfig.hasSupabaseConfig) {
+      try {
+        final uri = Uri.parse(
+            '${ApiConfig.supabaseUrl}/rest/v1/morph_orders?id=eq.$orderId');
+        await http
+            .patch(
+              uri,
+              headers: _supabaseHeaders,
+              body: jsonEncode({
+                "status": "COMPLETED",
+                "total_kg": actualWeightKg,
+                "points_awarded": earnedPts,
+              }),
+            )
+            .timeout(const Duration(seconds: 4));
+      } catch (_) {}
+    }
 
     try {
       final response = await patch(ApiConfig.ordersEndpoint, {
@@ -197,32 +194,7 @@ class ApiService extends GetConnect {
     };
   }
 
-  // 5. SYNC CHAT -> Simpan pesan chat ke Supabase (morph_chats)
-  Future<void> postChatMessageToBackend({
-    required String orderId,
-    required String senderRole,
-    required String senderName,
-    required String message,
-  }) async {
-    try {
-      final client = _supabase;
-      if (client != null) {
-        await client.from('morph_chats').insert({
-          "id": "MSG-${DateTime.now().millisecondsSinceEpoch}",
-          "order_id": orderId,
-          "sender_role": senderRole,
-          "sender_name": senderName,
-          "message_text": message,
-        });
-      }
-    } catch (_) {}
-  }
-
   void _cacheLocalOrder(OrderModel order) {
-    try {
-      final List existing = _box.read<List>('morph_orders_list') ?? [];
-      existing.insert(0, order.toJson());
-      _box.write('morph_orders_list', existing);
-    } catch (_) {}
+    _localCache.insert(0, order.toJson());
   }
 }

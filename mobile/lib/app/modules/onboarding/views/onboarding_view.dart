@@ -13,50 +13,57 @@ class OnboardingView extends GetView<OnboardingController> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Top Badge
+              // Top Brand Header
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    children: [
-                      Container(
-                        width: 44,
-                        height: 44,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF00880D),
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        child: const Icon(
-                          Icons.recycling_rounded,
-                          color: Colors.white,
-                          size: 28,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      const Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            "MORPH",
-                            style: TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.w900,
-                              color: Color(0xFF0F172A),
-                              letterSpacing: -0.5,
-                            ),
+                  Expanded(
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF00880D),
+                            borderRadius: BorderRadius.circular(14),
                           ),
-                          Text(
-                            "by TeknoHijau • Bandar Lampung",
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFF059669),
-                            ),
+                          child: const Icon(
+                            Icons.recycling_rounded,
+                            color: Colors.white,
+                            size: 28,
                           ),
-                        ],
-                      ),
-                    ],
+                        ),
+                        const SizedBox(width: 12),
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                "MORPH",
+                                style: TextStyle(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.w900,
+                                  color: Color(0xFF0F172A),
+                                  letterSpacing: -0.5,
+                                ),
+                              ),
+                              Text(
+                                "by TeknoHijau • Bandar Lampung",
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF059669),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
+                  const SizedBox(width: 8),
                   Container(
                     padding:
                         const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -66,7 +73,7 @@ class OnboardingView extends GetView<OnboardingController> {
                       border: Border.all(color: const Color(0xFFBBF7D0)),
                     ),
                     child: const Text(
-                      "🌱 1 APK • 2 Peran Demo",
+                      "🌱 Bandar Lampung",
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w800,
@@ -137,7 +144,7 @@ class OnboardingView extends GetView<OnboardingController> {
               const Spacer(),
 
               const Text(
-                "Pilih Mode Aplikasi (Role Switcher Instan):",
+                "Pilih Peran Anda untuk Melanjutkan:",
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 13,
@@ -147,12 +154,12 @@ class OnboardingView extends GetView<OnboardingController> {
               ),
               const SizedBox(height: 12),
 
-              // Button 1: Masuk sebagai Warga
+              // Button 1: Masuk sebagai Pengguna
               ElevatedButton.icon(
                 onPressed: controller.enterAsWarga,
                 icon: const Icon(Icons.home_rounded, size: 24),
                 label: const Text(
-                  "Masuk sebagai Warga (Pesan Jemputan)",
+                  "Masuk sebagai Pengguna",
                   style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
                 ),
                 style: ElevatedButton.styleFrom(
@@ -176,7 +183,7 @@ class OnboardingView extends GetView<OnboardingController> {
                   color: Color(0xFF00880D),
                 ),
                 label: const Text(
-                  "Masuk sebagai Mitra Driver (MORPH Partner)",
+                  "Masuk sebagai Mitra Driver",
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w800,

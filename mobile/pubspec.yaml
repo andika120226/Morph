@@ -1,4 +1,5 @@
 # Konfigurasi Paket Aplikasi Mobile MORPH Bandar Lampung (Tim TeknoHijau)
+# 100% Pure Dart & Web/Android Safe (Bebas Native Hook objective_c/path_provider/ffi)
 name: morph_bandar_lampung
 description: Platform On-Demand Pengelolaan Sampah Cerdas Kota Bandar Lampung (Mode Warga & Mode Mitra Kebersihan).
 publish_to: "none"
@@ -11,8 +12,8 @@ dependencies:
   flutter:
     sdk: flutter
   get: ^4.6.6
-  get_storage: ^2.1.1
-  supabase_flutter: ^2.6.0
+  http: ^1.2.2
+  intl: ^0.19.0
 
 dev_dependencies:
   flutter_test:
