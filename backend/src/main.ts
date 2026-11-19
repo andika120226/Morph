@@ -3,17 +3,16 @@ import { AppModule } from './app.module.js';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  
-  // Enable CORS for Next.js frontend
+
+  // Aktifkan CORS terbuka untuk Next.js Web Admin & Flutter Mobile App
   app.enableCors({
-    origin: true,
+    origin: '*',
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
-    credentials: true,
   });
 
   const port = process.env.PORT ?? 4000;
   await app.listen(port);
-  console.log(`🚀 MORPH Backend NestJS is running on: http://localhost:${port}`);
+  console.log(`🚀 MORPH NestJS Backend running on: http://localhost:${port}`);
 }
 
 await bootstrap();

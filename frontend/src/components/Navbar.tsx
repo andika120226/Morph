@@ -19,8 +19,13 @@ export default function Navbar() {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Sembunyikan Navbar pada halaman Splash Screen (/), Login, dan Register
-  if (pathname === "/" || pathname === "/login" || pathname === "/register") {
+  // Sembunyikan Navbar pada halaman Publik (/), Login, Register, dan Portal Admin
+  if (
+    pathname === "/" ||
+    pathname === "/login" ||
+    pathname === "/register" ||
+    pathname?.startsWith("/admin")
+  ) {
     return null;
   }
 

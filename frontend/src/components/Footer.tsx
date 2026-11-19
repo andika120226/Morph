@@ -7,8 +7,13 @@ import { Recycle, Heart, ShieldCheck, Leaf, Globe2, Sparkles } from "lucide-reac
 export default function Footer() {
   const pathname = usePathname();
 
-  // Sembunyikan Footer pada halaman Splash Screen (/), Login, dan Register
-  if (pathname === "/" || pathname === "/login" || pathname === "/register") {
+  // Sembunyikan Footer pada halaman Publik (/), Login, Register, dan Portal Admin
+  if (
+    pathname === "/" ||
+    pathname === "/login" ||
+    pathname === "/register" ||
+    pathname?.startsWith("/admin")
+  ) {
     return null;
   }
 

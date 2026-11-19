@@ -7,48 +7,122 @@ generator client {
   provider = "prisma-client-js"
 }
 
-model User {
-  id        String   @id @default(uuid())
-  name      String
-  email     String   @unique
-  points    Int      @default(0)
-  reports   Report[]
-  createdAt DateTime @default(now())
+enum UserRole {
+  WARGA
+  DRIVER
+  ADMIN
 }
 
-model Report {
-  id          String       @id @default(uuid())
-  userId      String
-  user        User         @relation(fields: [userId], references: [id])
-  imageUrl    String
-  category    String       // ORGANIC, ANORGANIC, MIXED
-  weight      Float        // dalam kg
-  latitude    Float
-  longitude   Float
-  status      ReportStatus @default(PENDING)
-  vehicleRec  String       // MOTOR, PICKUP, TRUCK
-  createdAt   DateTime     @default(now())
+enum WasteCategory {
+  ORGANIK
+  ANORGANIK
 }
 
-model Driver {
-  id           String   @id @default(uuid())
-  name         String
-  vehicleType  String   // MOTOR, TOSA, PICKUP, TRUCK
-  isReady      Boolean  @default(true)
-  currentLat   Float
-  currentLng   Float
+enum WasteOrderStatus {
+  SEARCHING
+  ACCEPTED
+  ON_THE_WAY
+  COMPLETED
+  CANCELLED
 }
 
-model Voucher {
-  id          String   @id @default(uuid())
-  title       String
-  discount    String
-  pointsCost  Int
-  merchant    String
+enum ChatSenderRole {
+  WARGA
+  DRIVER
 }
 
 enum ReportStatus {
   PENDING
   ACCEPTED
   COMPLETED
+}
+
+model User {
+  id            String       @id @default(uuid())
+  name          String
+  email         String       @unique
+  role          UserRole     @default(WARGA)
+  pointsBalance Int          @default(1250)
+  points        Int          @default(1250)
+  phone         String       @default("0812-8890-4521")
+  address       String       @default("Jl. ZA. Pagar Alam No. 45, Kedaton, Bandar Lampung")
+  driverFleet   DriverFleet?
+  wargaOrders   WasteOrder[] @relation("WargaOrders")
+  driverOrders  WasteOrder[] @relation("DriverOrders")
+  reports       Report[]
+  createdAt     DateTime     @default(now())
+}
+
+model DriverFleet {
+  id            String       @id @default(uuid())
+  userId        String       @unique
+  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plateNumber   String
+  maxCapacityKg Float        @default(100)
+  currentLoadKg Float        @default(35)
+  isOnline      Boolean      @default(true)
+  lat           Float        @default(-5.3824)
+  lng           Float        @default(105.2586)
+  orders        WasteOrder[] @relation("FleetOrders")
+}
+
+model WasteOrder {
+  id                String           @id @default(uuid())
+  wargaId           String
+  warga             User             @relation("WargaOrders", fields: [wargaId], references: [id])
+  driverId          String?
+  driverUser        User?            @relation("DriverOrders", fields: [driverId], references: [id])
+  fleetId           String?
+  fleet             DriverFleet?     @relation("FleetOrders", fields: [fleetId], references: [id])
+  category          WasteCategory    @default(ORGANIK)
+  estimatedWeightKg Float
+  actualWeightKg    Float?
+  pickupLat         Float            @default(-5.3824)
+  pickupLng         Float            @default(105.2586)
+  addressText       String
+  status            WasteOrderStatus @default(SEARCHING)
+  pointsEarned      Int              @default(0)
+  chats             ChatMessage[]
+  createdAt         DateTime         @default(now())
+}
+
+model ChatMessage {
+  id         String         @id @default(uuid())
+  orderId    String
+  order      WasteOrder     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  senderRole ChatSenderRole
+  message    String
+  createdAt  DateTime       @default(now())
+}
+
+// Legacy compatibility models for existing modules
+model Report {
+  id         String       @id @default(uuid())
+  userId     String
+  user       User         @relation(fields: [userId], references: [id])
+  imageUrl   String
+  category   String
+  weight     Float
+  latitude   Float
+  longitude  Float
+  status     ReportStatus @default(PENDING)
+  vehicleRec String
+  createdAt  DateTime     @default(now())
+}
+
+model Driver {
+  id          String  @id @default(uuid())
+  name        String
+  vehicleType String
+  isReady     Boolean @default(true)
+  currentLat  Float
+  currentLng  Float
+}
+
+model Voucher {
+  id         String @id @default(uuid())
+  title      String
+  discount   String
+  pointsCost Int
+  merchant   String
 }
